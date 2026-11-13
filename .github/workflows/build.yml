@@ -1,0 +1,37 @@
+name: Build GlassSearch
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install ldid dpkg make
+
+      - name: Set up Theos
+        run: |
+          git clone --recursive --depth=1 https://github.com/theos/theos.git "$HOME/theos"
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+
+      - name: Download iOS SDKs
+        run: |
+          git clone --depth=1 https://github.com/theos/sdks.git /tmp/sdks
+          cp -R /tmp/sdks/*.sdk "$HOME/theos/sdks/"
+
+      - name: Build .deb
+        run: |
+          export PATH="$(brew --prefix make)/libexec/gnubin:$PATH"
+          make package FINALPACKAGE=1
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: GlassSearch-deb
+          path: packages/*.deb
